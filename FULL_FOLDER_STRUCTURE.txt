@@ -1,0 +1,222 @@
+Learnix/ (project root)
+- .gitattributes
+- .gitignore
+- .env.example
+- ATTRIBUTIONS.md
+- FIXES_README.md
+- README.md
+- index.html
+- package.json
+- package-lock.json
+- postcss.config.mjs
+- setup.ps1
+- setup.sh
+- smoke-check.mjs
+- vite.config.ts
+- vercel.json
+- tsconfig.json
+- .github/
+  - workflows/
+    - ci.yml
+- public/
+  - favicon.svg
+  - favicon.ico
+- server/
+  - package.json
+  - package-lock.json
+  - .env.example
+  - src/
+    - index.js
+    - config/
+      - db.js
+      - env.js
+    - controllers/
+      - adminController.js
+      - academicYearController.js
+      - assignmentController.js
+      - authController.js
+      - contentController.js
+      - courseController.js
+      - departmentController.js
+      - feeController.js
+      - lessonController.js
+      - studentProfileController.js
+      - submissionController.js
+    - middleware/
+      - auth.js
+      - errorHandler.js
+      - uploadMiddleware.js
+    - models/
+      - AcademicYear.js
+      - Activity.js
+      - Assignment.js
+      - Attendance.js
+      - AuditLog.js
+      - Certificate.js
+      - Content.js
+      - Course.js
+      - Department.js
+      - Discussion.js
+      - Document.js
+      - Exam.js
+      - Fee.js
+      - InstructorProfile.js
+      - Lesson.js
+      - Notification.js
+      - Progress.js
+      - Result.js
+      - Semester.js
+      - Setting.js
+      - StudentProfile.js
+      - Submission.js
+      - Timetable.js
+      - User.js
+    - routes/
+      - adminRoutes.js
+      - academicYearRoutes.js
+      - aiRoutes.js
+      - assignmentRoutes.js
+      - attendanceRoutes.js
+      - authRoutes.js
+      - certAndAuditRoutes.js
+      - contentRoutes.js
+      - courseRoutes.js
+      - departmentRoutes.js
+      - discussionRoutes.js
+      - documentRoutes.js
+      - examRoutes.js
+      - feeRoutes.js
+      - lessonRoutes.js
+      - notificationRoutes.js
+      - profileRoutes.js
+      - resultRoutes.js
+      - semesterRoutes.js
+      - submissionRoutes.js
+      - timetableRoutes.js
+      - userRoutes.js
+    - scripts/
+      - seed.js
+    - uploads/  (directory present)
+- src/
+  - App.tsx
+  - main.tsx
+  - vite-env.d.ts
+  - types/
+    - images.d.ts
+  - styles/
+    - index.css
+    - fonts.css
+    - login.css
+    - tailwind.css
+    - theme.css
+    - theme-aesthetic.css
+    - theme-dark-glass.css
+  - assets/
+    - image.png
+    - b087d7bc1149e49b815ebddc955d693760362ab7.png
+    - 4d6ab98f39ae75e687adcc13329d1df80212a3d4.png
+  - app/
+    - components/
+      - Header.tsx
+      - Login.tsx
+      - OnboardingGate.tsx
+      - ProtectedRoute.tsx
+      - Sidebar.tsx
+      - onboarding/
+        - StudentOnboarding.tsx
+        - InstructorOnboarding.tsx
+      - pages/
+        - ImageWithFallback.tsx
+        - pages/student/
+          - AIChat.tsx
+          - Assignments.tsx
+          - Attendance.tsx
+          - Videos.tsx
+          - TimetableView.tsx
+          - Submissions.tsx
+          - StudentResults.tsx
+          - StudentProfilePage.tsx
+          - StudentExams.tsx
+          - StudentCertificates.tsx
+          - Progress.tsx
+          - Fees.tsx
+          - DocumentHub.tsx
+          - Dashboard.tsx
+          - CourseViewer.tsx
+          - Courses.tsx
+        - pages/instructor/
+          - InstructorSubmissions.tsx
+          - InstructorStudents.tsx
+          - InstructorDashboard.tsx
+          - InstructorCourses.tsx
+          - InstructorContent.tsx
+          - InstructorAttendance.tsx
+          - InstructorAssignments.tsx
+        - pages/admin/
+          - AdminDepartments.tsx
+          - AdminDashboard.tsx
+          - AdminCourses.tsx
+          - AdminContent.tsx
+          - AdminAuditLogs.tsx
+          - AdminAnalytics.tsx
+          - AdminFees.tsx
+          - AdminExams.tsx
+          - AdminSettings.tsx
+          - AdminDocuments.tsx
+          - AdminSubmissions.tsx
+          - AdminTimetable.tsx
+          - AdminUsers.tsx
+          - AdminResults.tsx
+          - ContentList.tsx
+      - components/pages/admin/ContentList.tsx
+      - components/shared/DiscussionForum.tsx
+      - components/ui/
+        - many UI primitives (alert, button, card, table, modal, etc.)
+        - card.tsx, calendar.tsx, button.tsx, breadcrumb.tsx, badge.tsx
+        - avatar.tsx, aspect-ratio.tsx, alert.tsx, alert-dialog.tsx
+        - accordion.tsx, utils.ts, use-mobile.ts, tooltip.tsx
+        - toggle.tsx, toggle-group.tsx, textarea.tsx, tabs.tsx
+        - table.tsx, switch.tsx, sonner.tsx, slider.tsx
+        - skeleton.tsx, sidebar.tsx, sheet.tsx, separator.tsx
+        - select.tsx, scroll-area.tsx, resizable.tsx
+        - radio-group.tsx, progress.tsx, popover.tsx
+        - pagination.tsx, navigation-menu.tsx, menubar.tsx
+        - label.tsx, input.tsx, input-otp.tsx
+        - hover-card.tsx, form.tsx, dropdown-menu.tsx, dialog.tsx
+        - drawer.tsx, command.tsx, context-menu.tsx
+  - app/
+    - hooks/
+      - useCurrentUser.ts
+    - providers/
+      - AuthProvider.tsx
+    - services/
+      - authService.ts
+      - adminService.ts
+      - assignmentService.ts
+      - attendanceService.ts
+      - contentService.ts
+      - courseService.ts
+      - departmentService.ts
+      - documentService.ts
+      - feeService.ts
+      - lessonService.ts
+      - studentProfileService.ts
+      - submissionService.ts
+      - timetableService.ts
+      - userService.ts
+      - academicYearService.ts
+    - utils/
+      - safeStr.ts
+      - feeReceiptGenerator.ts
+      - exportUtils.ts
+  - test/
+    - adminService.test.ts
+    - auth.test.ts
+    - courseService.test.ts
+    - feeService.test.ts
+    - submissionService.test.ts
+    - setup.ts
+
+Notes:
+- There are ~223 items scanned in the workspace (files and folders).
+- If you want the literal list (one-per-line) or a different output format (JSON, tree), I can regenerate and save that as well.
