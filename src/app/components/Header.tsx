@@ -1,3 +1,7 @@
+// src/app/components/Header.tsx
+// UPDATED: Profile dropdown now shows read-only profile card for students/instructors
+// Admin still gets navigate to profile edit page
+
 import { Bell, Menu, Palette } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge }  from "./ui/badge";
@@ -9,6 +13,8 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../providers/AuthProvider";
 import { useEffect, useState } from "react";
+import { StudentProfileCard } from "./pages/student/StudentProfileCard";
+import { InstructorProfileCard } from "./pages/instructor/InstructorProfileCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -56,6 +62,8 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [theme, setThemeState] = useState<ThemeKey>(
     () => (localStorage.getItem("learnix-theme") as ThemeKey) || "default"
   );
+  // Profile card modal state
+  const [showProfileCard, setShowProfileCard] = useState(false);
 
   const cleanPath = pathname.endsWith("/") && pathname !== "/" ? pathname.slice(0, -1) : pathname;
   const title = TITLES[cleanPath] || "Dashboard";
@@ -125,140 +133,160 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   const currentTheme = THEMES.find(t => t.key === theme)!;
 
+  const handleProfileClick = () => {
+    if (user?.role === "admin") {
+      // Admin navigates to settings/users, no profile card
+      navigate("/admin/dashboard");
+    } else {
+      // Student or instructor — show read-only profile card
+      setShowProfileCard(true);
+    }
+  };
+
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-10 ae-header dg-header">
-      <div className="px-4 md:px-6 py-3.5 flex items-center justify-between">
+    <>
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 ae-header dg-header">
+        <div className="px-4 md:px-6 py-3.5 flex items-center justify-between">
 
-        {/* Left */}
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={onMenuClick}>
-            <Menu className="w-5 h-5" />
-          </Button>
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 truncate">{title}</h2>
-        </div>
+          {/* Left */}
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={onMenuClick}>
+              <Menu className="w-5 h-5" />
+            </Button>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 truncate">{title}</h2>
+          </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-1 md:gap-2 shrink-0">
+          {/* Right */}
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
 
-          {/* Theme switcher */}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" title="Switch theme" className="relative">
-                <Palette style={{ width: "1rem", height: "1rem" }} />
-                <span
-                  className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
-                  style={{ background: currentTheme.dot }}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel className="text-xs uppercase tracking-wider text-slate-400 pb-1">
-                Theme
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {THEMES.map(t => (
+            {/* Theme switcher */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" title="Switch theme" className="relative">
+                  <Palette style={{ width: "1rem", height: "1rem" }} />
+                  <span
+                    className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
+                    style={{ background: currentTheme.dot }}
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuLabel className="text-xs uppercase tracking-wider text-slate-400 pb-1">
+                  Theme
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {THEMES.map(t => (
+                  <DropdownMenuItem
+                    key={t.key}
+                    className="flex items-center gap-2.5 cursor-pointer text-sm"
+                    onClick={() => applyTheme(t.key)}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.dot }} />
+                    <span className={theme === t.key ? "font-semibold" : ""}>{t.label}</span>
+                    {theme === t.key && <span className="ml-auto text-xs opacity-60">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Notifications */}
+            <DropdownMenu
+              modal={false}
+              open={notifOpen}
+              onOpenChange={o => { setNotifOpen(o); if (o) fetchNotifications(); }}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell style={{ width: "1rem", height: "1rem" }} />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center p-0 px-1 bg-red-500 text-white text-[10px] pointer-events-none">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
+                  {unreadCount > 0 && (
+                    <button className="text-xs text-indigo-600 hover:underline" onClick={markAllRead}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-slate-400 text-sm">No notifications yet</div>
+                ) : notifications.map(n => (
+                  <DropdownMenuItem
+                    key={n._id}
+                    className={`flex flex-col items-start gap-0.5 px-3 py-2.5 cursor-pointer ${!n.isRead ? "bg-indigo-50/60" : ""}`}
+                    onClick={() => !n.isRead && markRead(n._id)}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="text-xs text-indigo-600 font-semibold">{typeLabel(n.type)}</span>
+                      {!n.isRead && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full ml-auto shrink-0" />}
+                    </div>
+                    <p className="text-sm font-medium text-slate-900 leading-snug">{n.title}</p>
+                    <p className="text-xs text-slate-500 line-clamp-2">{n.message}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleDateString()}</p>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Profile */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 pl-1 pr-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-indigo-600 text-white font-bold text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:block text-sm font-medium text-slate-700 max-w-[100px] truncate">
+                    {displayName}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>
+                  <p className="font-semibold">{displayName}</p>
+                  <p className="text-xs text-slate-400 font-normal capitalize">{user?.role}</p>
+                </DropdownMenuLabel>
+
+                <DropdownMenuSeparator />
+
+                {/* Profile button — behaviour differs by role */}
                 <DropdownMenuItem
-                  key={t.key}
-                  className="flex items-center gap-2.5 cursor-pointer text-sm"
-                  onClick={() => applyTheme(t.key)}
+                  className="cursor-pointer"
+                  onClick={handleProfileClick}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.dot }} />
-                  <span className={theme === t.key ? "font-semibold" : ""}>{t.label}</span>
-                  {theme === t.key && <span className="ml-auto text-xs opacity-60">✓</span>}
+                  {user?.role === "admin" ? "Dashboard" : "My Profile"}
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
-          {/* Notifications */}
-          <DropdownMenu
-            modal={false}
-            open={notifOpen}
-            onOpenChange={o => { setNotifOpen(o); if (o) fetchNotifications(); }}
-          >
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell style={{ width: "1rem", height: "1rem" }} />
-                {unreadCount > 0 && (
-                  <Badge className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center p-0 px-1 bg-red-500 text-white text-[10px] pointer-events-none">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
-                {unreadCount > 0 && (
-                  <button className="text-xs text-indigo-600 hover:underline" onClick={markAllRead}>
-                    Mark all read
-                  </button>
-                )}
-              </div>
-              <DropdownMenuSeparator />
-              {notifications.length === 0 ? (
-                <div className="px-4 py-6 text-center text-slate-400 text-sm">No notifications yet</div>
-              ) : notifications.map(n => (
+                <DropdownMenuSeparator />
+
+                {/* Logout */}
                 <DropdownMenuItem
-                  key={n._id}
-                  className={`flex flex-col items-start gap-0.5 px-3 py-2.5 cursor-pointer ${!n.isRead ? "bg-indigo-50/60" : ""}`}
-                  onClick={() => !n.isRead && markRead(n._id)}
+                  className="text-red-600 font-medium cursor-pointer"
+                  onClick={() => { logout(); navigate("/login"); }}
                 >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="text-xs text-indigo-600 font-semibold">{typeLabel(n.type)}</span>
-                    {!n.isRead && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full ml-auto shrink-0" />}
-                  </div>
-                  <p className="text-sm font-medium text-slate-900 leading-snug">{n.title}</p>
-                  <p className="text-xs text-slate-500 line-clamp-2">{n.message}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleDateString()}</p>
+                  Sign Out
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Profile */}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 pl-1 pr-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-indigo-600 text-white font-bold text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden md:block text-sm font-medium text-slate-700 max-w-[100px] truncate">
-                  {displayName}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-           <DropdownMenuContent align="end" className="w-48">
-  <DropdownMenuLabel>
-    <p className="font-semibold">{displayName}</p>
-    <p className="text-xs text-slate-400 font-normal capitalize">{user?.role}</p>
-  </DropdownMenuLabel>
-
-  <DropdownMenuSeparator />
-
-  {/* 👤 PROFILE BUTTON */}
-  <DropdownMenuItem
-    className="cursor-pointer"
-    onClick={() => navigate("/dashboard/profile")}
-  >
-    Profile
-  </DropdownMenuItem>
-
-  <DropdownMenuSeparator />
-
-  {/* 🚪 LOGOUT */}
-  <DropdownMenuItem
-    className="text-red-600 font-medium cursor-pointer"
-    onClick={() => { logout(); navigate("/login"); }}
-  >
-    Sign Out
-  </DropdownMenuItem>
-</DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Profile Card Modals */}
+      {showProfileCard && user?.role === "student" && (
+        <StudentProfileCard onClose={() => setShowProfileCard(false)} />
+      )}
+      {showProfileCard && user?.role === "instructor" && (
+        <InstructorProfileCard onClose={() => setShowProfileCard(false)} />
+      )}
+    </>
   );
 }

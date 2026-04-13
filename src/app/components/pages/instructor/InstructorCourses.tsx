@@ -26,27 +26,27 @@ import {
 type LessonType = "video" | "pdf" | "text" | "quiz";
 
 const TYPE_META = {
-  video: { icon: Video,      label: "Video",  color: "text-blue-600 bg-blue-50",   desc: "Upload or link a video" },
-  pdf:   { icon: FileText,   label: "PDF",    color: "text-red-600 bg-red-50",     desc: "Upload or link a PDF" },
-  text:  { icon: Type,       label: "Text",   color: "text-green-600 bg-green-50", desc: "Write text content" },
-  quiz:  { icon: HelpCircle, label: "Quiz",   color: "text-purple-600 bg-purple-50", desc: "Multiple choice" },
+  video: { icon: Video, label: "Video", color: "text-blue-600 bg-blue-50", desc: "Upload or link a video" },
+  pdf: { icon: FileText, label: "PDF", color: "text-red-600 bg-red-50", desc: "Upload or link a PDF" },
+  text: { icon: Type, label: "Text", color: "text-green-600 bg-green-50", desc: "Write text content" },
+  quiz: { icon: HelpCircle, label: "Quiz", color: "text-purple-600 bg-purple-50", desc: "Multiple choice" },
 };
 
 /* ─── Lesson Editor Modal ──────────────────────────── */
 function LessonModal({ courseId, lesson, onClose, onSave }: {
   courseId: string; lesson: Lesson | null; onClose: () => void; onSave: () => void;
 }) {
-  const [type,        setType]        = useState<LessonType>(lesson?.type || "video");
-  const [title,       setTitle]       = useState(lesson?.title || "");
+  const [type, setType] = useState<LessonType>(lesson?.type || "video");
+  const [title, setTitle] = useState(lesson?.title || "");
   const [description, setDescription] = useState(lesson?.description || "");
-  const [contentUrl,  setContentUrl]  = useState(lesson?.contentUrl || "");
+  const [contentUrl, setContentUrl] = useState(lesson?.contentUrl || "");
   const [textContent, setTextContent] = useState(lesson?.textContent || "");
-  const [duration,    setDuration]    = useState(lesson?.duration?.toString() || "");
-  const [isPreview,   setIsPreview]   = useState(lesson?.isPreview || false);
-  const [file,        setFile]        = useState<File | null>(null);
-  const [quiz,        setQuiz]        = useState(lesson?.quiz || [{ question: "", options: ["","","",""], correctIndex: 0 }]);
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState("");
+  const [duration, setDuration] = useState(lesson?.duration?.toString() || "");
+  const [isPreview, setIsPreview] = useState(lesson?.isPreview || false);
+  const [file, setFile] = useState<File | null>(null);
+  const [quiz, setQuiz] = useState(lesson?.quiz || [{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSave = async () => {
     if (!title.trim()) { setError("Title is required"); return; }
@@ -54,32 +54,32 @@ function LessonModal({ courseId, lesson, onClose, onSave }: {
     try {
       if (file) {
         const fd = new FormData();
-        fd.append("title",       title.trim());
+        fd.append("title", title.trim());
         fd.append("description", description.trim());
-        fd.append("type",        type);
-        fd.append("isPreview",   String(isPreview));
-        fd.append("duration",    duration || "0");
+        fd.append("type", type);
+        fd.append("isPreview", String(isPreview));
+        fd.append("duration", duration || "0");
         if (type === "text") fd.append("textContent", textContent);
         if (type === "quiz") fd.append("quiz", JSON.stringify(quiz));
         fd.append("file", file);
         if (lesson) await updateLesson(lesson._id, fd);
-        else        await createLesson(courseId, fd);
+        else await createLesson(courseId, fd);
       } else {
         const data = { title: title.trim(), description: description.trim(), type, contentUrl, textContent, isPreview, duration: parseInt(duration) || 0, quiz: type === "quiz" ? quiz : [] };
         if (lesson) await updateLesson(lesson._id, data);
-        else        await createLesson(courseId, data);
+        else await createLesson(courseId, data);
       }
       onSave(); onClose();
     } catch (err: any) { setError(err.message || "Save failed"); }
     finally { setSaving(false); }
   };
 
-  const addQuestion  = () => setQuiz(q => [...q, { question: "", options: ["","","",""], correctIndex: 0 }]);
-  const removeQuestion = (i: number) => setQuiz(q => q.filter((_,idx) => idx !== i));
+  const addQuestion = () => setQuiz(q => [...q, { question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+  const removeQuestion = (i: number) => setQuiz(q => q.filter((_, idx) => idx !== i));
   const updateQuestion = (i: number, field: string, val: any) =>
-    setQuiz(q => q.map((item,idx) => idx === i ? { ...item, [field]: val } : item));
+    setQuiz(q => q.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
   const updateOption = (qi: number, oi: number, val: string) =>
-    setQuiz(q => q.map((item,idx) => idx === qi ? { ...item, options: item.options.map((o,oidx) => oidx === oi ? val : o) } : item));
+    setQuiz(q => q.map((item, idx) => idx === qi ? { ...item, options: item.options.map((o, oidx) => oidx === oi ? val : o) } : item));
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -150,11 +150,11 @@ function LessonModal({ courseId, lesson, onClose, onSave }: {
 
 /* ─── Course Card ──────────────────────────────────── */
 function CourseRow({ course, onEdit, onDelete }: { course: Course; onEdit: (c: Course) => void; onDelete: (id: string) => void }) {
-  const [expanded,     setExpanded]     = useState(false);
-  const [lessons,      setLessons]      = useState<Lesson[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loadingLessons, setLoadingLessons] = useState(false);
-  const [lessonModal,  setLessonModal]  = useState<Lesson | null | "new">(null);
-  const [dragging,     setDragging]     = useState<string | null>(null);
+  const [lessonModal, setLessonModal] = useState<Lesson | null | "new">(null);
+  const [dragging, setDragging] = useState<string | null>(null);
 
   const loadLessons = async () => {
     if (loadingLessons) return;
@@ -177,7 +177,7 @@ function CourseRow({ course, onEdit, onDelete }: { course: Course; onEdit: (c: C
   const handleDrop = async (targetId: string) => {
     if (!dragging || dragging === targetId) return;
     const from = lessons.findIndex(l => l._id === dragging);
-    const to   = lessons.findIndex(l => l._id === targetId);
+    const to = lessons.findIndex(l => l._id === targetId);
     const reordered = [...lessons];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
@@ -286,24 +286,23 @@ function CourseRow({ course, onEdit, onDelete }: { course: Course; onEdit: (c: C
 
 /* ─── Main Page ────────────────────────────────────── */
 export function InstructorCourses() {
-  const [courses,     setCourses]     = useState<Course[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [query,       setQuery]       = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
   const [courseModal, setCourseModal] = useState<Course | "new" | null>(null);
-  const [form,        setForm]        = useState({ title: "", duration: "", description: "", isFree: true, price: "" });
-  const [saving,      setSaving]      = useState(false);
-  const [formError,   setFormError]   = useState("");
+  const [form, setForm] = useState({ title: "", duration: "", description: "", isFree: true, price: "" });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      // Instructors only get their own private courses from the API
       const all = await getCourses();
-      // Extra safety: filter to private only on the client side
-      setCourses(all.filter(c => c.courseType === "private") || []);
+      setCourses(all || []); // Show ALL courses assigned to this instructor
     } catch { console.error("Load failed"); }
     finally { setLoading(false); }
   }, []);
+
 
   useEffect(() => { load(); }, [load]);
 
@@ -329,12 +328,12 @@ export function InstructorCourses() {
     setSaving(true);
     try {
       const payload = {
-        title:      form.title,
-        duration:   form.duration,
+        title: form.title,
+        duration: form.duration,
         description: form.description,
         courseType: "private" as const, // instructors always create private courses
-        isFree:     form.isFree,
-        price:      form.isFree ? 0 : Number(form.price) || 0,
+        isFree: form.isFree,
+        price: form.isFree ? 0 : Number(form.price) || 0,
       };
       if (courseModal === "new") {
         await createCourse(payload);
@@ -378,7 +377,7 @@ export function InstructorCourses() {
         <div>
           <p className="text-sm font-medium text-blue-800">Private vs Academic courses</p>
           <p className="text-xs text-blue-600 mt-0.5">
-            You can create <strong>private courses</strong> here — open to any student (free or paid). 
+            You can create <strong>private courses</strong> here — open to any student (free or paid).
             <strong> Academic courses</strong> (linked to departments and semesters) are created by administrators and assigned to you as instructor.
           </p>
         </div>
@@ -387,8 +386,8 @@ export function InstructorCourses() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Courses",  value: courses.length },
-          { label: "Approved",       value: courses.filter(c => c.approvalStatus === "approved").length },
+          { label: "Total Courses", value: courses.length },
+          { label: "Approved", value: courses.filter(c => c.approvalStatus === "approved").length },
           { label: "Total Students", value: courses.reduce((s, c) => s + (c.students || 0), 0) },
         ].map(s => (
           <Card key={s.label}><CardContent className="p-4 text-center">

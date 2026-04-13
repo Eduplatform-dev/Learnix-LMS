@@ -24,6 +24,7 @@ const courseSchema = z.object({
   department: z.string().optional().nullable().default(null),
   semesterNumber: z.coerce.number().int().min(1).max(8).optional().nullable().default(null),
   subjectCode: z.string().optional().default(""),
+  instructor: z.string().optional().nullable().default(null),
   credits: z.coerce.number().optional().default(0),
   academicYear: z.string().optional().nullable().default(null),
 }).refine((data) => {
@@ -64,11 +65,9 @@ router.get("/", authenticateToken, async (req, res) => {
       if (req.query.courseType) filter.courseType = req.query.courseType;
 
     } else if (req.user.role === "instructor") {
-      // Instructors see ONLY their own private courses
-      // They never manage academic courses
       filter.instructor = req.user._id;
-      filter.courseType = "private"; // instructors only own private courses
-
+      // Instructors can see BOTH their private courses AND academic courses assigned to them
+      // Do NOT restrict to courseType = "private"
     } else {
       // Admin sees all
       if (req.query.approvalStatus) filter.approvalStatus = req.query.approvalStatus;
@@ -153,9 +152,11 @@ router.post(
 
       const course = await Course.create({
         ...data,
-        instructor: req.user._id,
+        // Admin can assign a specific instructor; instructors always own their own course
+        instructor: (req.user.role === "admin" && data.instructor)
+          ? data.instructor
+          : req.user._id,
         approvalStatus,
-        // Academic courses are always free (institutional)
         isFree: data.courseType === "academic" ? true : data.isFree,
         price: data.courseType === "academic" ? 0 : data.price,
         status: approvalStatus === "approved" ? "active" : "active",

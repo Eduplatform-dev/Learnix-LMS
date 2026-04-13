@@ -5,7 +5,9 @@ import mongoose from "mongoose";
  * After submission (isSubmitted: true) only an admin can modify it.
  *
  * FIX: unified field name to `user` (was `userId` in controller, `user` in model — now consistent).
- * FIX: enrollmentNumber sparse unique index so multiple null values are allowed.
+ * FIX: enrollmentNumber index uses partialFilterExpression instead of sparse:true
+ *      to reliably allow multiple null values while enforcing uniqueness on non-null strings.
+ *      sparse:true can fail with E11000 on null in some MongoDB versions.
  */
 const studentProfileSchema = new mongoose.Schema(
   {
@@ -22,8 +24,6 @@ const studentProfileSchema = new mongoose.Schema(
       type:    String,
       trim:    true,
       default: null,
-      // sparse: allows multiple null values while still enforcing uniqueness
-      // when a value IS set
     },
     department: {
       type:    mongoose.Schema.Types.ObjectId,
@@ -135,11 +135,21 @@ const studentProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Sparse unique index: allows many null enrollment numbers, but no two
-// non-null documents can share the same enrollment number.
+// ──────────────────────────────────────────────────────────────────────────────
+// CRITICAL FIX: Use partialFilterExpression instead of sparse:true
+//
+// sparse:true is supposed to exclude null/missing values from the index,
+// but in some MongoDB versions/drivers it still creates an index entry for
+// null, causing E11000 when multiple profiles have enrollmentNumber: null.
+//
+// partialFilterExpression: { enrollmentNumber: { $type: "string" } }
+// only indexes documents where enrollmentNumber is an actual string (non-null),
+// which correctly allows unlimited nulls while enforcing uniqueness on real values.
+// ──────────────────────────────────────────────────────────────────────────────
+// NEW — correct
 studentProfileSchema.index(
   { enrollmentNumber: 1 },
-  { unique: true, sparse: true }
+  { unique: true, partialFilterExpression: { enrollmentNumber: { $type: "string" } } }
 );
 
 export default mongoose.model("StudentProfile", studentProfileSchema);
