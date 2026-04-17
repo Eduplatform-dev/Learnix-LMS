@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "./providers/AuthProvider";
 import { StudentOnboarding } from "./onboarding/StudentOnboarding";
 import { InstructorOnboarding } from "./onboarding/InstructorOnboarding";
 

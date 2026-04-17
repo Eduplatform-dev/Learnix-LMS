@@ -1,4 +1,4 @@
-﻿import { useAuth } from "../providers/AuthProvider";
+﻿import { useAuth } from "../components/providers/AuthProvider";
 
 export const useCurrentUser = () => {
   const { user, loading } = useAuth();

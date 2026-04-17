@@ -2,7 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import { AuthProvider } from "./app/providers/AuthProvider";
+import { AuthProvider } from "./app/components/providers/AuthProvider";
 import { OnboardingGate } from "./app/components/OnboardingGate";
 import "./styles/index.css";
 

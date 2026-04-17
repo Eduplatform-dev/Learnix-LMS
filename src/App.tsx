@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import { useAuth } from "./app/providers/AuthProvider";
+import { useAuth } from "./app/components/providers/AuthProvider";
 import type { UserRole } from "./app/services/authService";
 
 import { Sidebar } from "./app/components/Sidebar";
@@ -16,7 +16,6 @@ import { CourseViewer }      from "./app/components/pages/student/CourseViewer";
 import { Videos }            from "./app/components/pages/student/Videos";
 import { Progress }          from "./app/components/pages/student/Progress";
 import { Assignments }       from "./app/components/pages/student/Assignments";
-import { Submissions }       from "./app/components/pages/student/Submissions";
 import { Fees }              from "./app/components/pages/student/Fees";
 import { AIChat }            from "./app/components/pages/student/AIChat";
 import { ContentLibrary }    from "./app/components/pages/student/ContentLibrary";
@@ -102,7 +101,6 @@ function UserRoutes() {
       <Route path="library"     element={<ContentLibrary />} />
       <Route path="progress"    element={<Progress />} />
       <Route path="assignments" element={<Assignments />} />
-      <Route path="submissions" element={<Submissions />} />
       <Route path="fees"        element={<Fees />} />
       <Route path="ai-chat"     element={<AIChat />} />
       <Route path="results"     element={<StudentResults />} />

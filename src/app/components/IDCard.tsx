@@ -3,7 +3,7 @@
 // Triggered by clicking the profile area in sidebar bottom-left
 
 import { useEffect, useState, useRef } from "react";
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "./providers/AuthProvider";
 import { X, Download, GraduationCap, Briefcase, Hash, Building2, Calendar, Shield, QrCode } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";

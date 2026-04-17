@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { BookOpen, Award, Clock, TrendingUp } from "lucide-react";
+import { BookOpen, Award, Clock, TrendingUp, ChevronRight } from "lucide-react";
 import { useCurrentUser } from "../../../hooks/useCurrentUser";
 import { getCourses, type Course } from "../../../services/courseService";
 import { getAssignments, type Assignment } from "../../../services/assignmentService";
 
 export function Dashboard() {
   const { user } = useCurrentUser();
+  const navigate = useNavigate();
   const [courses,     setCourses]     = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -52,13 +54,54 @@ export function Dashboard() {
   const totalCourses   = courses.length;
   const activeCourses  = courses.filter((c) => c.status !== "Completed").length;
   const completedAsgn  = assignments.filter((a) => a.status === "Submitted").length;
+  const pendingAsgn    = assignments.filter((a) => a.status !== "Submitted").length;
   const assignmentPct  = assignments.length === 0 ? 0 : Math.round((completedAsgn / assignments.length) * 100);
 
   const stats = [
-    { label: "Total Courses",   value: String(totalCourses),   icon: BookOpen, color: "from-indigo-500 to-blue-600" },
-    { label: "Active Courses",  value: String(activeCourses),  icon: Award,    color: "from-emerald-500 to-teal-600" },
-    { label: "Assignments",     value: String(assignments.length), icon: Clock, color: "from-violet-500 to-purple-600" },
-    { label: "Completion",      value: `${assignmentPct}%`,    icon: TrendingUp, color: "from-orange-500 to-amber-600" },
+    {
+      label: "Total Courses",
+      value: String(totalCourses),
+      subLabel: `${activeCourses} active`,
+      icon: BookOpen,
+      color: "from-indigo-500 to-blue-600",
+      bg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      onClick: () => navigate("/dashboard/courses"),
+      description: "Browse & enroll",
+    },
+    {
+      label: "Active Courses",
+      value: String(activeCourses),
+      subLabel: "In progress",
+      icon: Award,
+      color: "from-emerald-500 to-teal-600",
+      bg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      onClick: () => navigate("/dashboard/courses?filter=enrolled"),
+      description: "Continue learning",
+    },
+    {
+      label: "Assignments",
+      value: String(assignments.length),
+      subLabel: `${pendingAsgn} pending`,
+      icon: Clock,
+      color: "from-violet-500 to-purple-600",
+      bg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      onClick: () => navigate("/dashboard/assignments"),
+      description: "View all tasks",
+    },
+    {
+      label: "Completion",
+      value: `${assignmentPct}%`,
+      subLabel: `${completedAsgn} submitted`,
+      icon: TrendingUp,
+      color: "from-orange-500 to-amber-600",
+      bg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      onClick: () => navigate("/dashboard/progress"),
+      description: "Track progress",
+    },
   ];
 
   // Upcoming assignments (not yet submitted)
@@ -82,28 +125,35 @@ export function Dashboard() {
               Continue your learning journey — {activeCourses > 0 ? `${activeCourses} course${activeCourses > 1 ? 's' : ''} in progress` : "Explore courses to get started"}
             </p>
           </div>
-          <Button className="bg-white text-indigo-600 hover:bg-white/90 font-semibold shrink-0">
+          <Button
+            className="bg-white text-indigo-600 hover:bg-white/90 font-semibold shrink-0"
+            onClick={() => navigate("/dashboard/courses")}
+          >
             Continue Learning
           </Button>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Clickable Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={i} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <Card
+              key={i}
+              onClick={stat.onClick}
+              className="border-0 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group"
+            >
               <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                  </div>
+                <div className="flex items-center justify-between mb-3">
                   <div className={`bg-gradient-to-br ${stat.color} w-12 h-12 rounded-xl flex items-center justify-center`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
                 </div>
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-700 mt-0.5">{stat.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{stat.subLabel}</p>
               </CardContent>
             </Card>
           );
@@ -112,10 +162,14 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Active Courses */}
-        <Card>
-          <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+        {/* Active Courses — clickable */}
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/dashboard/courses")}
+        >
+          <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">My Active Courses</h2>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
           <CardContent className="p-0">
             {courses.filter((c) => c.status !== "Completed").length === 0 ? (
@@ -142,10 +196,14 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Upcoming Assignments */}
-        <Card>
-          <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+        {/* Upcoming Assignments — clickable */}
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/dashboard/assignments")}
+        >
+          <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Upcoming Assignments</h2>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
           <CardContent className="p-0">
             {upcoming.length === 0 ? (

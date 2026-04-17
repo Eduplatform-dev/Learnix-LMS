@@ -2,7 +2,7 @@
 // Read-only profile card for students (accessible from header dropdown)
 
 import { useEffect, useState } from "react";
-import { useAuth } from "../../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthProvider";
 import {
   X, GraduationCap, Phone, Mail, MapPin, Users, Calendar,
   Hash, BookOpen, Award, Building2, User, Shield, Clock

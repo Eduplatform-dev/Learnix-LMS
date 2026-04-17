@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Badge } from "../../ui/badge";
-import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, Star, GraduationCap } from "lucide-react";
-import { useAuth } from "../../../providers/AuthProvider";
+import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, Star, GraduationCap, ChevronRight } from "lucide-react";
+import { useAuth } from "../../providers/AuthProvider";
 import { getCourses } from "../../../services/courseService";
 import { getAssignments } from "../../../services/assignmentService";
 import { getSubmissions } from "../../../services/submissionService";
@@ -13,6 +14,7 @@ import {
 
 export function InstructorDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -47,8 +49,6 @@ export function InstructorDashboard() {
   const pendingGrading = submissions.filter((s) => s.status === "submitted").length;
   const gradedCount = submissions.filter((s) => s.status === "graded").length;
 
-  // FIX: count unique enrolled students across instructor's courses only
-  // enrolledStudents is an array on each course
   const enrolledSet = new Set<string>();
   courses.forEach(c => {
     (c.enrolledStudents || []).forEach((sid: any) => {
@@ -56,15 +56,49 @@ export function InstructorDashboard() {
     });
   });
   const totalStudents = enrolledSet.size;
-
-  // Count only approved courses
   const activeCourses = courses.filter(c => c.approvalStatus === "approved" || c.status === "active");
 
   const stats = [
-    { label: "My Courses",     value: courses.length,    icon: BookOpen,  color: "from-indigo-500 to-blue-600",  bg: "bg-indigo-50",  iconColor: "text-indigo-600"  },
-    { label: "Enrolled Students", value: totalStudents,  icon: Users,     color: "from-emerald-500 to-teal-600", bg: "bg-emerald-50", iconColor: "text-emerald-600" },
-    { label: "Assignments",    value: assignments.length, icon: FileText,  color: "from-violet-500 to-purple-600",bg: "bg-violet-50",  iconColor: "text-violet-600"  },
-    { label: "Pending Review", value: pendingGrading,    icon: Clock,     color: "from-amber-500 to-orange-600", bg: "bg-amber-50",   iconColor: "text-amber-600"   },
+    {
+      label: "My Courses",
+      value: courses.length,
+      icon: BookOpen,
+      color: "from-indigo-500 to-blue-600",
+      bg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      onClick: () => navigate("/instructor/courses"),
+      description: "View all courses",
+    },
+    {
+      label: "Enrolled Students",
+      value: totalStudents,
+      icon: Users,
+      color: "from-emerald-500 to-teal-600",
+      bg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      onClick: () => navigate("/instructor/students"),
+      description: "View student list",
+    },
+    {
+      label: "Assignments",
+      value: assignments.length,
+      icon: FileText,
+      color: "from-violet-500 to-purple-600",
+      bg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      onClick: () => navigate("/instructor/assignments"),
+      description: "Manage assignments",
+    },
+    {
+      label: "Pending Review",
+      value: pendingGrading,
+      icon: Clock,
+      color: "from-amber-500 to-orange-600",
+      bg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      onClick: () => navigate("/instructor/submissions"),
+      description: "Grade submissions",
+    },
   ];
 
   // Submission trend (last 7 days)
@@ -80,7 +114,6 @@ export function InstructorDashboard() {
     return { day: days[d.getDay()], submissions: count };
   });
 
-  // Per-course enrollment data
   const courseData = courses.slice(0, 5).map((c) => ({
     name:     c.title.length > 15 ? c.title.slice(0, 13) + "…" : c.title,
     students: c.enrolledStudents?.length ?? c.students ?? 0,
@@ -106,22 +139,26 @@ export function InstructorDashboard() {
         )}
       </div>
 
-      {/* Stats */}
+      {/* Clickable Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <Card key={i} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <Card
+              key={i}
+              onClick={stat.onClick}
+              className="border-0 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group"
+            >
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                  </div>
+                <div className="flex items-center justify-between mb-3">
                   <div className={`${stat.bg} w-12 h-12 rounded-xl flex items-center justify-center`}>
                     <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                   </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
                 </div>
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-700 mt-0.5">{stat.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{stat.description}</p>
               </CardContent>
             </Card>
           );
@@ -130,11 +167,15 @@ export function InstructorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Submission Trend */}
-        <Card>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/instructor/submissions")}
+        >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
               Submission Activity (Last 7 Days)
+              <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -157,11 +198,15 @@ export function InstructorDashboard() {
         </Card>
 
         {/* Course Enrollment */}
-        <Card>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/instructor/courses")}
+        >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
               <Users className="w-5 h-5 text-emerald-600" />
               Students per Course
+              <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -186,11 +231,15 @@ export function InstructorDashboard() {
 
       {/* Courses needing approval */}
       {courses.filter(c => c.approvalStatus === "pending_approval").length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card
+          className="border-amber-200 bg-amber-50 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/instructor/courses")}
+        >
           <CardContent className="p-5">
             <div className="flex items-center gap-2 text-amber-700 font-medium mb-3">
               <Clock className="w-4 h-4" />
               {courses.filter(c => c.approvalStatus === "pending_approval").length} course{courses.filter(c => c.approvalStatus === "pending_approval").length !== 1 ? "s" : ""} awaiting admin approval
+              <ChevronRight className="w-4 h-4 ml-auto" />
             </div>
             {courses.filter(c => c.approvalStatus === "pending_approval").map(c => (
               <div key={c._id} className="flex items-center justify-between py-2 border-b border-amber-100 last:border-0">
@@ -203,11 +252,15 @@ export function InstructorDashboard() {
       )}
 
       {/* Recent Submissions to Grade */}
-      <Card>
+      <Card
+        className="cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => navigate("/instructor/submissions")}
+      >
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <CheckCircle className="w-5 h-5 text-violet-600" />
             Recent Submissions — Needs Review
+            <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

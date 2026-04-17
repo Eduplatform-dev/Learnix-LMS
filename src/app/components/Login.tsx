@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { loginUser, registerUser } from "../../app/services/authService";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../app/providers/AuthProvider";
+import { useAuth } from "./providers/AuthProvider";
 import { User, Lock, Mail, Hash } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";

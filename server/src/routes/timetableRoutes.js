@@ -6,36 +6,50 @@ import { authenticateToken, authorize } from "../middleware/auth.js";
 const router = express.Router();
 
 const slotSchema = z.object({
-  day:         z.enum(["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]),
-  startTime:   z.string().regex(/^\d{2}:\d{2}$/),
-  endTime:     z.string().regex(/^\d{2}:\d{2}$/),
-  subject:     z.string().min(1).max(100).trim(),
+  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+
+  type: z.enum(["lecture", "lab", "tutorial", "break", "free"]).default("lecture"),
+
+  subject: z.string().max(100).trim().optional().default(""),
   subjectCode: z.string().max(20).optional().default(""),
-  instructor:  z.string().optional().nullable().default(null),
-  room:        z.string().max(50).optional().default(""),
-  type:        z.enum(["lecture","lab","tutorial","break","free"]).default("lecture"),
-  color:       z.string().optional().default("#6366f1"),
-});
+  instructor: z.string().optional().nullable().default(null),
+  room: z.string().max(50).optional().default(""),
+  color: z.string().optional().default("#6366f1"),
+})
+  .superRefine((data, ctx) => {
+    // ✅ Only require subject for non-break/free
+    if (data.type !== "break" && data.type !== "free") {
+      if (!data.subject || data.subject.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Subject is required for lecture/lab/tutorial",
+          path: ["subject"],
+        });
+      }
+    }
+  });
 
 const timetableSchema = z.object({
-  department:   z.string().min(1),
-  year:         z.coerce.number().int().min(1).max(6),
-  division:     z.string().max(10).optional().default("A"),
+  department: z.string().min(1),
+  year: z.coerce.number().int().min(1).max(6),
+  division: z.string().max(10).optional().default("A"),
   academicYear: z.string().min(4).max(10),
-  semester:     z.coerce.number().int().min(1).max(8),
-  slots:        z.array(slotSchema).default([]),
-  isPublished:  z.boolean().optional().default(false),
+  semester: z.coerce.number().int().min(1).max(8),
+  slots: z.array(slotSchema).default([]),
+  isPublished: z.boolean().optional().default(false),
 });
 
 /* ── GET timetable (student/instructor) ───────────────── */
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const filter = {};
-    if (req.query.department)   filter.department   = req.query.department;
-    if (req.query.year)         filter.year         = Number(req.query.year);
-    if (req.query.division)     filter.division     = req.query.division;
+    if (req.query.department) filter.department = req.query.department;
+    if (req.query.year) filter.year = Number(req.query.year);
+    if (req.query.division) filter.division = req.query.division;
     if (req.query.academicYear) filter.academicYear = req.query.academicYear;
-    if (req.query.semester)     filter.semester     = Number(req.query.semester);
+    if (req.query.semester) filter.semester = Number(req.query.semester);
 
     // Students/instructors only see published ones
     if (req.user.role === "student") filter.isPublished = true;
@@ -78,7 +92,7 @@ router.post("/", authenticateToken, authorize(["admin"]), async (req, res) => {
     // Upsert
     const existing = await Timetable.findOne({ department, year, division, academicYear, semester });
     if (existing) {
-      existing.slots       = slots;
+      existing.slots = slots;
       existing.isPublished = isPublished;
       await existing.save();
       return res.json(existing);
@@ -99,8 +113,18 @@ router.post("/", authenticateToken, authorize(["admin"]), async (req, res) => {
 router.put("/:id", authenticateToken, authorize(["admin"]), async (req, res) => {
   try {
     const updates = {};
-    if (req.body.slots !== undefined)       updates.slots       = req.body.slots;
-    if (req.body.isPublished !== undefined)  updates.isPublished = req.body.isPublished;
+    if (req.body.slots !== undefined) {
+      const parsedSlots = z.array(slotSchema).safeParse(req.body.slots);
+
+      if (!parsedSlots.success) {
+        return res.status(400).json({
+          error: parsedSlots.error.errors.map(e => e.message)
+        });
+      }
+
+      updates.slots = parsedSlots.data;
+    }
+    if (req.body.isPublished !== undefined) updates.isPublished = req.body.isPublished;
 
     const tt = await Timetable.findByIdAndUpdate(req.params.id, updates, { new: true })
       .populate("department", "name code")

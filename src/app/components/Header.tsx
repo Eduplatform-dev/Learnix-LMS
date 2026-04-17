@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "./providers/AuthProvider";
 import { useEffect, useState } from "react";
 import { StudentProfileCard } from "./pages/student/StudentProfileCard";
 import { InstructorProfileCard } from "./pages/instructor/InstructorProfileCard";

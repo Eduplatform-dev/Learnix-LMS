@@ -2,7 +2,7 @@
 // Read-only profile card for instructors
 
 import { useEffect, useState } from "react";
-import { useAuth } from "../../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthProvider";
 import {
   X, Briefcase, Phone, Mail, MapPin, Calendar,
   Hash, GraduationCap, Building2, Award, Clock, Star

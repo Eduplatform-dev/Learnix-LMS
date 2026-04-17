@@ -53,6 +53,23 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled:  "bg-red-100 text-red-700",
 };
 
+/** Compute effective status based on current date (overrides stored status for display) */
+function getEffectiveStatus(exam: Exam): string {
+  if (exam.status === "cancelled") return "cancelled";
+  const d = daysUntil(exam.examDate);
+  if (d < 0) return "completed";
+  if (d === 0) return "ongoing";
+  return "scheduled";
+}
+
+function daysUntil(dateStr: string): number {
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 function ExamModal({
   exam,
   departments,
@@ -243,10 +260,12 @@ export function AdminExams() {
     } finally { setDeleting(null); }
   };
 
+  // Filter using effective (computed) status, not stored status
   const filtered = exams.filter(e => {
+    const effectiveStatus = getEffectiveStatus(e);
     const mq = !search || e.title.toLowerCase().includes(search.toLowerCase()) || e.subject.toLowerCase().includes(search.toLowerCase());
     const mt = typeFilter   === "all" || e.examType === typeFilter;
-    const ms = statusFilter === "all" || e.status   === statusFilter;
+    const ms = statusFilter === "all" || effectiveStatus === statusFilter;
     return mq && mt && ms;
   });
 
@@ -257,6 +276,27 @@ export function AdminExams() {
     acc[d].push(exam);
     return acc;
   }, {});
+
+  // Sort dates: upcoming first, past last
+  const sortedDates = Object.keys(grouped).sort((a, b) => {
+    const dateA = new Date(grouped[a][0].examDate).getTime();
+    const dateB = new Date(grouped[b][0].examDate).getTime();
+    const now = Date.now();
+    const futureA = dateA >= now;
+    const futureB = dateB >= now;
+    if (futureA && !futureB) return -1;
+    if (!futureA && futureB) return 1;
+    if (futureA && futureB) return dateA - dateB; // upcoming: soonest first
+    return dateB - dateA; // past: most recent first
+  });
+
+  // Stats using effective status
+  const stats = {
+    scheduled:  exams.filter(e => getEffectiveStatus(e) === "scheduled").length,
+    ongoing:    exams.filter(e => getEffectiveStatus(e) === "ongoing").length,
+    completed:  exams.filter(e => getEffectiveStatus(e) === "completed").length,
+    cancelled:  exams.filter(e => getEffectiveStatus(e) === "cancelled").length,
+  };
 
   if (loading) return <div className="flex items-center justify-center p-12"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -272,13 +312,13 @@ export function AdminExams() {
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats — use computed effective status */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "Total Scheduled", value: exams.length,                                       color: "text-gray-900" },
-          { label: "Upcoming",        value: exams.filter(e => e.status === "scheduled").length,  color: "text-blue-600" },
-          { label: "Completed",       value: exams.filter(e => e.status === "completed").length,  color: "text-green-600" },
-          { label: "Cancelled",       value: exams.filter(e => e.status === "cancelled").length,  color: "text-red-600"  },
+          { label: "Total Scheduled", value: exams.length,          color: "text-gray-900" },
+          { label: "Upcoming",        value: stats.scheduled,        color: "text-blue-600" },
+          { label: "Completed",       value: stats.completed,        color: "text-green-600" },
+          { label: "Cancelled",       value: stats.cancelled,        color: "text-red-600"  },
         ].map(s => (
           <Card key={s.label}><CardContent className="p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -314,7 +354,7 @@ export function AdminExams() {
       </div>
 
       {/* Exam Timeline */}
-      {Object.keys(grouped).length === 0 ? (
+      {sortedDates.length === 0 ? (
         <Card><CardContent className="p-12 text-center">
           <Calendar className="w-12 h-12 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-400">No exams scheduled yet.</p>
@@ -322,55 +362,64 @@ export function AdminExams() {
         </CardContent></Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(grouped).map(([date, dayExams]) => (
-            <div key={date}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
+          {sortedDates.map(date => {
+            const dayExams = grouped[date];
+            const isPast = daysUntil(dayExams[0].examDate) < 0;
+            return (
+              <div key={date}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isPast ? "bg-gray-100" : "bg-indigo-100"}`}>
+                    <Calendar className={`w-5 h-5 ${isPast ? "text-gray-400" : "text-indigo-600"}`} />
+                  </div>
+                  <h3 className={`font-semibold ${isPast ? "text-gray-400" : "text-gray-900"}`}>{date}</h3>
+                  {isPast && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Past</span>}
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-gray-400">{dayExams.length} exam{dayExams.length > 1 ? "s" : ""}</span>
                 </div>
-                <h3 className="font-semibold text-gray-900">{date}</h3>
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">{dayExams.length} exam{dayExams.length > 1 ? "s" : ""}</span>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ml-13 ${isPast ? "opacity-60" : ""}`}>
+                  {dayExams.map(exam => {
+                    const effectiveStatus = getEffectiveStatus(exam);
+                    return (
+                      <Card key={exam._id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate">{exam.title}</h4>
+                              <p className="text-sm text-gray-600">{exam.subject} {exam.subjectCode && `(${exam.subjectCode})`}</p>
+                            </div>
+                            <div className="flex gap-1 ml-2 flex-wrap justify-end">
+                              <Badge className={`text-xs ${EXAM_TYPE_COLORS[exam.examType] || "bg-gray-100 text-gray-600"}`}>
+                                {exam.examType.replace("_", " ")}
+                              </Badge>
+                              {/* Show effective computed status */}
+                              <Badge className={`text-xs ${STATUS_COLORS[effectiveStatus] || "bg-gray-100"}`}>
+                                {effectiveStatus}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{exam.startTime} – {exam.endTime}</span>
+                            {exam.room && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{exam.room}{exam.building ? `, ${exam.building}` : ""}</span>}
+                            <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{exam.totalMarks} marks (pass: {exam.passingMarks})</span>
+                            {exam.semesterNumber && <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />Sem {exam.semesterNumber}</span>}
+                          </div>
+                          {exam.instructions && (
+                            <p className="text-xs text-gray-400 mt-2 line-clamp-2 italic">"{exam.instructions}"</p>
+                          )}
+                          <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
+                            <Button size="sm" variant="ghost" onClick={() => setModal(exam)}><Edit className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" className="text-red-500" disabled={deleting === exam._id} onClick={() => handleDelete(exam._id)}>
+                              {deleting === exam._id ? "..." : <Trash2 className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-13">
-                {dayExams.map(exam => (
-                  <Card key={exam._id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 truncate">{exam.title}</h4>
-                          <p className="text-sm text-gray-600">{exam.subject} {exam.subjectCode && `(${exam.subjectCode})`}</p>
-                        </div>
-                        <div className="flex gap-1 ml-2">
-                          <Badge className={`text-xs ${EXAM_TYPE_COLORS[exam.examType] || "bg-gray-100 text-gray-600"}`}>
-                            {exam.examType.replace("_", " ")}
-                          </Badge>
-                          <Badge className={`text-xs ${STATUS_COLORS[exam.status] || "bg-gray-100"}`}>
-                            {exam.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{exam.startTime} – {exam.endTime}</span>
-                        {exam.room && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{exam.room}{exam.building ? `, ${exam.building}` : ""}</span>}
-                        <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{exam.totalMarks} marks (pass: {exam.passingMarks})</span>
-                        {exam.semesterNumber && <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />Sem {exam.semesterNumber}</span>}
-                      </div>
-                      {exam.instructions && (
-                        <p className="text-xs text-gray-400 mt-2 line-clamp-2 italic">"{exam.instructions}"</p>
-                      )}
-                      <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
-                        <Button size="sm" variant="ghost" onClick={() => setModal(exam)}><Edit className="w-3.5 h-3.5" /></Button>
-                        <Button size="sm" variant="ghost" className="text-red-500" disabled={deleting === exam._id} onClick={() => handleDelete(exam._id)}>
-                          {deleting === exam._id ? "..." : <Trash2 className="w-3.5 h-3.5" />}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

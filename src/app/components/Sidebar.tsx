@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Badge }    from "./ui/badge";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { useAuth }  from "../providers/AuthProvider";
+import { useAuth }  from "./providers/AuthProvider";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -40,7 +40,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: "/dashboard/library",      label: "Resources",     icon: FolderOpen },
     { path: "/dashboard/progress",     label: "My Progress",   icon: LineChart },
     { path: "/dashboard/assignments",  label: "Assignments",   icon: FileText },
-    { path: "/dashboard/submissions",  label: "Submissions",   icon: Upload },
     { path: "/dashboard/attendance",   label: "Attendance",    icon: CheckSquare },
     { path: "/dashboard/exams",        label: "Exam Schedule", icon: Calendar },
     { path: "/dashboard/results",      label: "My Results",    icon: ClipboardList },
@@ -59,6 +58,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: "/admin/results",     label: "Results",     icon: ClipboardList },
     { path: "/admin/analytics",   label: "Analytics",   icon: LineChart },
     { path: "/admin/content",     label: "Content",     icon: FolderOpen },
+    { path: "/admin/timetable",   label: "Timetable",   icon: Calendar },
     { path: "/admin/fees",        label: "Fees",        icon: DollarSign },
     { path: "/admin/submissions", label: "Submissions", icon: Upload },
     { path: "/admin/audit-logs",  label: "Audit Logs",  icon: Shield },

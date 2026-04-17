@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+﻿// src/app/components/pages/student/Progress.tsx — FIXED VERSION
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
@@ -10,6 +11,7 @@ import { TrendingUp, Award, Target, Clock, BookOpen } from "lucide-react";
 import { getCourses } from "../../../services/courseService";
 import { getAssignments } from "../../../services/assignmentService";
 import { getSubmissions } from "../../../services/submissionService";
+import { useCurrentUser } from "../../../hooks/useCurrentUser";
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#8b5cf6"];
 
@@ -24,6 +26,7 @@ const parseGrade = (g: string | null): number | null => {
 };
 
 export function Progress() {
+  const { user } = useCurrentUser();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
     { label: "Average Score",     value: "—", sub: "No grades yet",   icon: TrendingUp, color: "text-green-600" },
@@ -37,14 +40,21 @@ export function Progress() {
   const [achievements,      setAchievements]      = useState<any[]>([]);
 
   useEffect(() => {
+    if (!user) return;
+    
     const load = async () => {
       try {
         const [c, a, s] = await Promise.allSettled([
           getCourses(), getAssignments(), getSubmissions(),
         ]);
-        const courses     = c.status === "fulfilled" ? c.value : [];
+        const allCourses  = c.status === "fulfilled" ? c.value : [];
         const assignments = a.status === "fulfilled" ? a.value : [];
         const subs        = s.status === "fulfilled" ? s.value : [];
+
+        // FIX: Only show ENROLLED courses (where student._id is in enrolledStudents)
+        const enrolledCourses = allCourses.filter((course) => 
+          course.enrolledStudents?.some((sid: any) => String(sid) === String(user._id))
+        );
 
         const gradedSubs     = subs.filter((sub) => sub.status === "graded" && sub.grade);
         const submittedCount = subs.filter((sub) => sub.status !== "draft").length;
@@ -53,13 +63,14 @@ export function Progress() {
 
         setStats([
           { label: "Average Score",    value: numericGrades.length ? `${avgScore}%` : "N/A", sub: `${numericGrades.length} graded`, icon: TrendingUp, color: "text-green-600" },
-          { label: "Courses Enrolled", value: String(courses.length), sub: `${courses.filter((x) => x.status !== "Completed").length} active`, icon: Award, color: "text-blue-600" },
+          { label: "Courses Enrolled", value: String(enrolledCourses.length), sub: `${enrolledCourses.length} active`, icon: Award, color: "text-blue-600" },
           { label: "Assignments",      value: String(assignments.length), sub: `${assignments.filter((x) => x.status === "Submitted").length} submitted`, icon: Target, color: "text-purple-600" },
           { label: "Submissions",      value: String(submittedCount), sub: `${gradedSubs.length} graded`, icon: Clock, color: "text-orange-600" },
         ]);
 
+        // Use enrolled courses only
         setCourseCompletion(
-          courses.slice(0, 4).map((course, i) => ({
+          enrolledCourses.slice(0, 4).map((course, i) => ({
             name:  course.title.length > 15 ? course.title.slice(0, 13) + "…" : course.title,
             value: course.progress || 0,
             color: PIE_COLORS[i % PIE_COLORS.length],
@@ -94,17 +105,19 @@ export function Progress() {
         );
 
         setAchievements([
-          { id: 1, title: "First Submission",  description: "Submitted your first assignment",         earned: submittedCount >= 1 },
-          { id: 2, title: "Course Explorer",   description: "Enrolled in at least 3 courses",         earned: courses.length >= 3 },
-          { id: 3, title: "High Achiever",     description: "Scored 90%+ on a graded submission",     earned: numericGrades.some((g) => g >= 90) },
-          { id: 4, title: "Consistent Learner",description: "Submitted 5 or more assignments",        earned: submittedCount >= 5 },
+          { id: 1, title: "First Submission",     description: "Submitted your first assignment",         earned: submittedCount >= 1 },
+          { id: 2, title: "Course Explorer",      description: "Enrolled in at least 3 courses",         earned: enrolledCourses.length >= 3 },
+          { id: 3, title: "High Achiever",        description: "Scored 90%+ on a graded submission",     earned: numericGrades.some((g) => g >= 90) },
+          { id: 4, title: "Consistent Learner",   description: "Submitted 5 or more assignments",        earned: submittedCount >= 5 },
+          { id: 5, title: "Perfect Score",        description: "Achieved 100% on an assignment",         earned: numericGrades.some((g) => g === 100) },
+          { id: 6, title: "Dedication",           description: "Completed all lessons in a course",      earned: enrolledCourses.some((c) => c.progress === 100) },
         ]);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (
@@ -210,7 +223,7 @@ export function Progress() {
       <Card>
         <CardHeader><CardTitle>Achievements</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {achievements.map((a) => (
               <div
                 key={a.id}
@@ -219,7 +232,7 @@ export function Progress() {
                 }`}
               >
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${a.earned ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-400"}`}>
-                  <BookOpen className="w-5 h-5" />
+                  <Award className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="font-medium text-gray-900 text-sm">{a.title}</p>

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock, Users, Star, Search, BookOpen, PlayCircle,
-  CheckCircle, Lock, Unlock, Zap, TrendingUp, Award,
+  CheckCircle, Unlock, Zap, TrendingUp, Award,
   GraduationCap, DollarSign, Eye, AlertCircle, X, CreditCard,
+  Lock, Layers,
 } from "lucide-react";
 import { Card, CardContent } from "../../ui/card";
 import { Badge } from "../../ui/badge";
@@ -18,6 +19,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 type CourseExt = Course & {
   progressPercent: number;
   lessonCount:     number;
+};
+
+type CurrentUserData = {
+  _id: string;
+  currentSemesterNumber: number | null;
+  academicYear: string | null;
+  department: string | null;
 };
 
 /* ── Demo Payment Modal ─────────────────────────────────── */
@@ -122,6 +130,144 @@ function PaymentModal({
   );
 }
 
+/* ── Course Card ─────────────────────────────────────────── */
+function CourseCard({
+  course,
+  enrolled,
+  completed,
+  isPaid,
+  isAcademic,
+  enrolling,
+  onEnroll,
+  onNavigate,
+}: {
+  course: CourseExt;
+  enrolled: boolean;
+  completed: boolean;
+  isPaid: boolean;
+  isAcademic: boolean;
+  enrolling: boolean;
+  onEnroll: () => void;
+  onNavigate: () => void;
+}) {
+  return (
+    <Card className="border border-gray-200 overflow-hidden hover:shadow-lg transition-all flex flex-col">
+      {/* Thumbnail */}
+      <div className={`relative h-40 overflow-hidden ${isAcademic ? "bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800" : "bg-gradient-to-br from-purple-500 via-violet-500 to-purple-700"}`}>
+        {course.image && (
+          <img
+            src={course.image}
+            alt={course.title}
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+          {completed ? (
+            <Badge className="bg-green-500 text-white border-0 text-xs">
+              <CheckCircle className="w-3 h-3 mr-1" />Completed
+            </Badge>
+          ) : enrolled ? (
+            <Badge className="bg-blue-500 text-white border-0 text-xs">
+              <PlayCircle className="w-3 h-3 mr-1" />Enrolled
+            </Badge>
+          ) : (
+            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur text-xs">
+              {isPaid ? <><DollarSign className="w-3 h-3 mr-1" />Paid</> : <><Unlock className="w-3 h-3 mr-1" />Free</>}
+            </Badge>
+          )}
+        </div>
+
+        {/* Lesson count */}
+        {course.lessonCount > 0 && (
+          <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+            <BookOpen className="w-3 h-3" />
+            {course.lessonCount} lesson{course.lessonCount !== 1 ? "s" : ""}
+          </div>
+        )}
+
+        {/* Progress bar */}
+        {enrolled && course.progressPercent > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+            <div
+              className="h-full bg-green-400 transition-all"
+              style={{ width: `${course.progressPercent}%` }}
+            />
+          </div>
+        )}
+      </div>
+
+      <CardContent className="p-4 flex flex-col flex-1">
+        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 leading-snug text-sm">
+          {course.title}
+        </h3>
+        <p className="text-xs text-gray-500 mb-2">
+          {typeof course.instructor === "string"
+            ? course.instructor
+            : (course as any).instructor?.username || "—"}
+        </p>
+
+        {/* Meta */}
+        <div className="flex items-center gap-3 text-xs text-gray-500 mb-3 flex-wrap">
+          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{course.duration}</span>
+          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{course.students}</span>
+          <span className="flex items-center gap-1 text-amber-500"><Star className="w-3 h-3 fill-current" />{course.rating}</span>
+          {isPaid && !enrolled && (
+            <span className="flex items-center gap-1 font-semibold text-purple-600">
+              <DollarSign className="w-3 h-3" />₹{course.price}
+            </span>
+          )}
+        </div>
+
+        {/* Progress bar for enrolled */}
+        {enrolled && (
+          <div className="mb-3">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Progress</span>
+              <span className="font-medium">{course.progressPercent}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div
+                className={`h-1.5 rounded-full transition-all ${completed ? "bg-green-500" : "bg-indigo-600"}`}
+                style={{ width: `${course.progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-auto">
+          {enrolled ? (
+            <Button className="w-full text-sm" variant={completed ? "outline" : "default"} onClick={onNavigate}>
+              {completed ? <><CheckCircle className="w-3.5 h-3.5 mr-1.5" />Review</> :
+               course.progressPercent > 0 ? <><PlayCircle className="w-3.5 h-3.5 mr-1.5" />Continue</> :
+               <><PlayCircle className="w-3.5 h-3.5 mr-1.5" />Start</>}
+            </Button>
+          ) : (
+            <div className="space-y-1.5">
+              <Button variant="outline" className="w-full text-xs gap-1.5" onClick={onNavigate}>
+                <Eye className="w-3.5 h-3.5" />Preview Free Lessons
+              </Button>
+              <Button
+                className={`w-full text-xs gap-1.5 ${isPaid ? "bg-purple-600 hover:bg-purple-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                disabled={enrolling}
+                onClick={onEnroll}
+              >
+                {enrolling ? "Enrolling..." :
+                 isPaid ? <><DollarSign className="w-3.5 h-3.5" />Pay ₹{course.price} & Enroll</> :
+                 <><Unlock className="w-3.5 h-3.5" />Enroll Free</>}
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Main Courses Page ──────────────────────────────────── */
 export function Courses() {
   const navigate = useNavigate();
@@ -129,16 +275,27 @@ export function Courses() {
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
   const [enrolling, setEnrolling] = useState<string | null>(null);
-  const [filter,    setFilter]    = useState<"all" | "enrolled" | "completed" | "academic" | "private">("all");
+  const [filter,    setFilter]    = useState<"all" | "enrolled" | "completed">("all");
   const [payModal,  setPayModal]  = useState<CourseExt | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserData | null>(null);
 
-  // Get the current logged-in user's ID for enrollment checks
-  const currentUserId = (() => {
+  // Get current user data including semester info
+  useEffect(() => {
     try {
       const u = localStorage.getItem("user");
-      return u ? JSON.parse(u)._id : null;
-    } catch { return null; }
-  })();
+      if (u) {
+        const parsed = JSON.parse(u);
+        setCurrentUser({
+          _id: parsed._id,
+          currentSemesterNumber: parsed.currentSemesterNumber ?? null,
+          academicYear: parsed.academicYear ?? null,
+          department: parsed.department ?? null,
+        });
+      }
+    } catch {}
+  }, []);
+
+  const currentUserId = currentUser?._id ?? null;
 
   useEffect(() => {
     const load = async () => {
@@ -174,11 +331,10 @@ export function Courses() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Enrollment failed");
-      // Add current user to enrolledStudents locally so UI updates immediately
       setCourses((prev) =>
         prev.map((c) =>
           c._id === courseId
-            ? { ...c, enrolledStudents: [...c.enrolledStudents, currentUserId] }
+            ? { ...c, enrolledStudents: [...c.enrolledStudents, currentUserId!] }
             : c
         )
       );
@@ -204,44 +360,39 @@ export function Courses() {
     navigate(`/dashboard/courses/${payModal._id}`);
   };
 
-  // FIX: isEnrolled checks if the current user's ID is in enrolledStudents array.
-  // Previously this checked `c.status === "active"` which is true for ALL courses —
-  // making every course appear enrolled. Now we check actual enrollment.
   const isEnrolled = (c: CourseExt): boolean => {
     if (!currentUserId) return false;
     return c.enrolledStudents.includes(currentUserId);
   };
 
-  // A course is "completed" only if the student has finished all lessons (100%)
   const isCompleted = (c: CourseExt): boolean =>
     isEnrolled(c) && c.progressPercent === 100;
 
-  const filtered = courses.filter((c) => {
-    const matchSearch =
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      (typeof c.instructor === "string"
-        ? c.instructor
-        : (c as any).instructor?.username || ""
-      ).toLowerCase().includes(search.toLowerCase());
+  // Split into academic and private
+  const academicCourses = courses.filter(c => c.courseType === "academic");
+  const privateCourses  = courses.filter(c => c.courseType === "private");
 
-    if (filter === "enrolled")  return matchSearch && isEnrolled(c);
-    if (filter === "completed") return matchSearch && isCompleted(c);
-    if (filter === "academic")  return matchSearch && c.courseType === "academic";
-    if (filter === "private")   return matchSearch && c.courseType === "private";
-    return matchSearch;
-  });
+  // Apply search + filter
+  const applyFilters = (list: CourseExt[]) =>
+    list.filter((c) => {
+      const matchSearch = !search ||
+        c.title.toLowerCase().includes(search.toLowerCase()) ||
+        (typeof c.instructor === "string" ? c.instructor :
+         (c as any).instructor?.username || "").toLowerCase().includes(search.toLowerCase());
+      if (filter === "enrolled")  return matchSearch && isEnrolled(c);
+      if (filter === "completed") return matchSearch && isCompleted(c);
+      return matchSearch;
+    });
+
+  const filteredAcademic = applyFilters(academicCourses);
+  const filteredPrivate  = applyFilters(privateCourses);
 
   const stats = {
     total:     courses.length,
     enrolled:  courses.filter(isEnrolled).length,
     completed: courses.filter(isCompleted).length,
-    avgProg:   courses.length
-      ? Math.round(
-          courses
-            .filter(isEnrolled)
-            .reduce((s, c) => s + c.progressPercent, 0) /
-            Math.max(courses.filter(isEnrolled).length, 1)
-        )
+    avgProg:   courses.filter(isEnrolled).length
+      ? Math.round(courses.filter(isEnrolled).reduce((s, c) => s + c.progressPercent, 0) / courses.filter(isEnrolled).length)
       : 0,
   };
 
@@ -257,16 +408,16 @@ export function Courses() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Courses</h1>
-        <p className="text-gray-500 mt-1">Browse, enroll and continue learning</p>
+        <p className="text-gray-500 mt-1">Your academic curriculum and additional learning</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total",        value: stats.total,            icon: BookOpen,   color: "text-indigo-600", bg: "bg-indigo-50" },
-          { label: "Enrolled",     value: stats.enrolled,         icon: Zap,        color: "text-blue-600",   bg: "bg-blue-50" },
-          { label: "Completed",    value: stats.completed,        icon: Award,      color: "text-green-600",  bg: "bg-green-50" },
-          { label: "Avg Progress", value: `${stats.avgProg}%`,    icon: TrendingUp, color: "text-amber-600",  bg: "bg-amber-50" },
+          { label: "Total",        value: stats.total,         icon: BookOpen,   color: "text-indigo-600", bg: "bg-indigo-50" },
+          { label: "Enrolled",     value: stats.enrolled,      icon: Zap,        color: "text-blue-600",   bg: "bg-blue-50" },
+          { label: "Completed",    value: stats.completed,     icon: Award,      color: "text-green-600",  bg: "bg-green-50" },
+          { label: "Avg Progress", value: `${stats.avgProg}%`, icon: TrendingUp, color: "text-amber-600",  bg: "bg-amber-50" },
         ].map((s) => {
           const Icon = s.icon;
           return (
@@ -298,8 +449,8 @@ export function Courses() {
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {(["all", "enrolled", "completed", "academic", "private"] as const).map((f) => (
+        <div className="flex gap-2">
+          {(["all", "enrolled", "completed"] as const).map((f) => (
             <Button
               key={f}
               size="sm"
@@ -313,185 +464,135 @@ export function Courses() {
         </div>
       </div>
 
-      {/* Course Grid */}
-      {filtered.length === 0 ? (
+      {/* ── ACADEMIC COURSES SECTION ─────────────────────── */}
+      {(filter === "all" || filteredAcademic.length > 0) && (
+        <div>
+          {/* Section header */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-900">Academic Courses</h2>
+              <p className="text-xs text-gray-500">
+                Department curriculum
+                {currentUser?.currentSemesterNumber
+                  ? ` · Semester ${currentUser.currentSemesterNumber}`
+                  : ""}
+              </p>
+            </div>
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+              {filteredAcademic.length} course{filteredAcademic.length !== 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          {/* Student's semester info banner */}
+          {currentUser?.currentSemesterNumber && (
+            <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-blue-700">
+              <GraduationCap className="w-4 h-4 shrink-0" />
+              <span>
+                Showing courses for your enrollment ·{" "}
+                <strong>Semester {currentUser.currentSemesterNumber}</strong>
+                {currentUser.academicYear
+                  ? ` · ${typeof currentUser.academicYear === "string" ? currentUser.academicYear : ""}`
+                  : ""}
+              </span>
+            </div>
+          )}
+
+          {filteredAcademic.length === 0 ? (
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-10 text-center">
+              <GraduationCap className="w-10 h-10 text-blue-300 mx-auto mb-2" />
+              <p className="text-blue-600 font-medium">No academic courses found</p>
+              <p className="text-blue-400 text-sm mt-1">
+                {search ? "Try clearing your search" : "Academic courses will appear here once added by your department"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredAcademic.map((course) => (
+                <CourseCard
+                  key={course._id}
+                  course={course}
+                  enrolled={isEnrolled(course)}
+                  completed={isCompleted(course)}
+                  isPaid={false}
+                  isAcademic
+                  enrolling={enrolling === course._id}
+                  onEnroll={() => handleEnrollClick(course)}
+                  onNavigate={() => navigate(`/dashboard/courses/${course._id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PRIVATE / ELECTIVE COURSES SECTION ────────────── */}
+      {(filter === "all" || filteredPrivate.length > 0) && (
+        <div className={filteredAcademic.length > 0 ? "pt-2" : ""}>
+          {/* Divider when both sections present */}
+          {filteredAcademic.length > 0 && (
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+              <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold px-2">
+                Additional Courses
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent" />
+            </div>
+          )}
+
+          {/* Section header */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <Layers className="w-5 h-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-900">Elective &amp; Extra Courses</h2>
+              <p className="text-xs text-gray-500">Skill-based and instructor-led courses open to all students</p>
+            </div>
+            <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+              {filteredPrivate.length} course{filteredPrivate.length !== 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          {filteredPrivate.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-10 text-center">
+              <Layers className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 font-medium">No elective courses found</p>
+              <p className="text-gray-400 text-sm mt-1">
+                {search ? "Try clearing your search" : "Instructor-created courses will appear here once approved"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredPrivate.map((course) => {
+                const isPaid = !course.isFree;
+                return (
+                  <CourseCard
+                    key={course._id}
+                    course={course}
+                    enrolled={isEnrolled(course)}
+                    completed={isCompleted(course)}
+                    isPaid={isPaid}
+                    isAcademic={false}
+                    enrolling={enrolling === course._id}
+                    onEnroll={() => handleEnrollClick(course)}
+                    onNavigate={() => navigate(`/dashboard/courses/${course._id}`)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty state when nothing matches filter */}
+      {filteredAcademic.length === 0 && filteredPrivate.length === 0 && (
         <div className="text-center py-20 text-gray-400">
           <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No courses found.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filtered.map((course) => {
-            const enrolled  = isEnrolled(course);
-            const completed = isCompleted(course);
-            const isPaid    = course.courseType === "private" && !course.isFree;
-            const isAcademic = course.courseType === "academic";
-            const price     = course.price ?? 0;
-
-            return (
-              <Card
-                key={course._id}
-                className="border border-gray-200 overflow-hidden hover:shadow-lg transition-all flex flex-col"
-              >
-                {/* Thumbnail */}
-                <div className="relative h-44 overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-600">
-                  {course.image && (
-                    <img
-                      src={course.image}
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                  {/* Badges */}
-                  <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
-                    {completed ? (
-                      <Badge className="bg-green-500 text-white border-0 text-xs">
-                        <CheckCircle className="w-3 h-3 mr-1" />Completed
-                      </Badge>
-                    ) : enrolled ? (
-                      <Badge className="bg-blue-500 text-white border-0 text-xs">
-                        <PlayCircle className="w-3 h-3 mr-1" />Enrolled
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-white/20 text-white border-white/30 backdrop-blur text-xs">
-                        {isPaid
-                          ? <><DollarSign className="w-3 h-3 mr-1" />Paid</>
-                          : <><Unlock className="w-3 h-3 mr-1" />Free</>}
-                      </Badge>
-                    )}
-                    <Badge className={`text-xs border-0 ${isAcademic ? "bg-indigo-600 text-white" : "bg-purple-600 text-white"}`}>
-                      {isAcademic
-                        ? <><GraduationCap className="w-3 h-3 mr-1" />Academic</>
-                        : "Private"}
-                    </Badge>
-                  </div>
-
-                  {/* Lesson count */}
-                  {course.lessonCount > 0 && (
-                    <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                      <BookOpen className="w-3 h-3" />
-                      {course.lessonCount} lesson{course.lessonCount !== 1 ? "s" : ""}
-                    </div>
-                  )}
-
-                  {/* Preview tag for unenrolled courses */}
-                  {!enrolled && (
-                    <div className="absolute bottom-3 left-3 bg-amber-500/90 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                      <Eye className="w-3 h-3" />Preview available
-                    </div>
-                  )}
-
-                  {/* Progress bar */}
-                  {enrolled && course.progressPercent > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                      <div
-                        className="h-full bg-green-400 transition-all"
-                        style={{ width: `${course.progressPercent}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <CardContent className="p-5 flex flex-col flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 leading-snug">
-                    {course.title}
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    {typeof course.instructor === "string"
-                      ? course.instructor
-                      : (course as any).instructor?.username || "—"}
-                  </p>
-
-                  {/* Academic department/semester info */}
-                  {isAcademic && course.department && (
-                    <div className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-2 py-1 mb-3 w-fit">
-                      <GraduationCap className="w-3 h-3" />
-                      {course.department?.name || course.department} · Sem {course.semesterNumber || "—"}
-                    </div>
-                  )}
-
-                  {/* Meta */}
-                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />{course.duration}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" />{course.students}
-                    </span>
-                    <span className="flex items-center gap-1 text-amber-500">
-                      <Star className="w-3.5 h-3.5 fill-current" />{course.rating}
-                    </span>
-                    {isPaid && !enrolled && (
-                      <span className="flex items-center gap-1 font-semibold text-indigo-600">
-                        <DollarSign className="w-3.5 h-3.5" />₹{price}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Progress bar for enrolled */}
-                  {enrolled && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                        <span>Progress</span>
-                        <span className="font-medium text-gray-700">{course.progressPercent}%</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${completed ? "bg-green-500" : "bg-indigo-600"}`}
-                          style={{ width: `${course.progressPercent}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CTA Buttons */}
-                  <div className="mt-auto space-y-2">
-                    {enrolled ? (
-                      /* Already enrolled — go directly to the course */
-                      <Button
-                        className="w-full"
-                        variant={completed ? "outline" : "default"}
-                        onClick={() => navigate(`/dashboard/courses/${course._id}`)}
-                      >
-                        {completed ? (
-                          <><CheckCircle className="w-4 h-4 mr-2" />Review Course</>
-                        ) : course.progressPercent > 0 ? (
-                          <><PlayCircle className="w-4 h-4 mr-2" />Continue Learning</>
-                        ) : (
-                          <><PlayCircle className="w-4 h-4 mr-2" />Start Course</>
-                        )}
-                      </Button>
-                    ) : (
-                      /* Not enrolled — show Preview + Enroll */
-                      <>
-                        <Button
-                          variant="outline"
-                          className="w-full text-sm gap-2"
-                          onClick={() => navigate(`/dashboard/courses/${course._id}`)}
-                        >
-                          <Eye className="w-4 h-4" />Preview Free Lessons
-                        </Button>
-                        <Button
-                          className={`w-full gap-2 ${isPaid ? "bg-purple-600 hover:bg-purple-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
-                          disabled={enrolling === course._id}
-                          onClick={() => handleEnrollClick(course)}
-                        >
-                          {enrolling === course._id
-                            ? "Enrolling..."
-                            : isPaid
-                              ? <><DollarSign className="w-4 h-4" />Pay ₹{price} & Enroll</>
-                              : <><Unlock className="w-4 h-4" />Enroll Free</>}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <p className="font-medium">No courses found</p>
+          <p className="text-sm mt-1">Try adjusting your search or filter</p>
         </div>
       )}
 
